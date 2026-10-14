@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PAST — Editorial Manuscript Status Dashboard</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Google Fonts: Inter & Prompt -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: 'Inter', 'Prompt', sans-serif;
+    }
+    @keyframes pulse-glow {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.9); }
+    }
+    .pulse-indicator {
+      animation: pulse-glow 2s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen p-4 sm:p-6 lg:p-8">
+
+  <!-- Container -->
+  <div class="max-w-7xl mx-auto space-y-6">
+
+    <!-- Top Header -->
+    <header class="flex flex-col md:flex-row md:items-center md:justify-between pb-6 border-b border-slate-800/80 gap-4">
+      <div>
+        <div class="flex items-center gap-3">
+          <div class="p-2.5 bg-indigo-600/20 border border-indigo-500/30 rounded-xl text-indigo-400">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">PAST Editorial Dashboard</h1>
+            <p class="text-xs sm:text-sm text-slate-400 mt-0.5">Progress in Applied Science and Technology — Manuscript Monitoring</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Status & Period Badge (Year / Issue ขนาดใหญ่) -->
+      <div class="flex flex-wrap items-center gap-2.5 sm:gap-3">
+        <div class="flex items-center bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-sm sm:text-base font-semibold text-slate-300 shadow-inner">
+          <span class="text-slate-400 text-xs sm:text-sm mr-1.5 font-medium tracking-wide">YEAR:</span>
+          <span id="badge-year" class="text-indigo-400 text-lg sm:text-2xl font-extrabold tracking-tight">2026</span>
+          <span class="mx-3 text-slate-700 text-base">|</span>
+          <span class="text-slate-400 text-xs sm:text-sm mr-1.5 font-medium tracking-wide">ISSUE:</span>
+          <span id="badge-issue" class="text-indigo-400 text-lg sm:text-2xl font-extrabold tracking-tight">3</span>
+        </div>
+
+        <button onclick="fetchSheetData()" class="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 px-3 py-1.5 rounded-xl transition text-xs font-medium text-slate-300 cursor-pointer">
+          <span class="h-2.5 w-2.5 rounded-full bg-emerald-400 pulse-indicator"></span>
+          <span id="sync-status">Live Sync</span>
+          <svg class="w-3.5 h-3.5 text-slate-400 hover:rotate-180 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Error Banner -->
+    <div id="error-banner" class="hidden bg-rose-500/10 border border-rose-500/30 text-rose-300 p-4 rounded-2xl text-sm flex items-center justify-between">
+      <span id="error-message">ไม่สามารถเข้าถึง Google Sheet ได้ กรุณาตรวจสอบสิทธิ์การแชร์ชีต</span>
+      <button onclick="fetchSheetData()" class="underline text-xs hover:text-white">ลองใหม่อีกครั้ง</button>
+    </div>
+
+    <!-- 7 KPI Summary Cards -->
+    <section class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 sm:gap-3.5">
+      
+      <!-- Total Articles -->
+      <div class="col-span-2 sm:col-span-3 lg:col-span-1 bg-gradient-to-br from-indigo-950/50 via-slate-900 to-slate-900 border border-indigo-500/40 rounded-2xl p-4 sm:p-4.5 shadow-lg relative overflow-hidden flex flex-col justify-between">
+        <div class="text-[11px] uppercase tracking-wider text-indigo-300 font-semibold flex items-center justify-between">
+          <span>Articles</span>
+          <span class="text-[9px] px-1.5 py-0.5 bg-indigo-500/20 text-indigo-300 rounded font-bold">TOTAL</span>
+        </div>
+        <div class="text-3xl sm:text-4xl font-black text-white my-1.5" id="kpi-total">0</div>
+        <div class="text-[11px] text-slate-400">ยอดรวมทั้งหมด</div>
+      </div>
+
+      <!-- Incomplete -->
+      <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 hover:border-slate-700 transition flex flex-col justify-between">
+        <div class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold flex items-center justify-between">
+          <span>Incomplete</span>
+          <span class="h-2 w-2 rounded-full bg-slate-400"></span>
+        </div>
+        <div class="text-2xl sm:text-3xl font-extrabold text-slate-300 my-1" id="kpi-incomplete">0</div>
+        <div class="text-[11px] text-slate-500 flex items-center justify-between">
+          <span>ยังไม่สมบูรณ์</span>
+          <span id="pct-incomplete" class="text-slate-400 font-medium">0%</span>
+        </div>
+      </div>
+
+      <!-- Submitted -->
+      <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 hover:border-sky-500/30 transition flex flex-col justify-between">
+        <div class="text-[11px] uppercase tracking-wider text-sky-400 font-semibold flex items-center justify-between">
+          <span>Submitted</span>
+          <span class="h-2 w-2 rounded-full bg-sky-400"></span>
+        </div>
+        <div class="text-2xl sm:text-3xl font-extrabold text-sky-400 my-1" id="kpi-submitted">0</div>
+        <div class="text-[11px] text-slate-500 flex items-center justify-between">
+          <span>ส่งบทความแล้ว</span>
+          <span id="pct-submitted" class="text-sky-400 font-medium">0%</span>
+        </div>
+      </div>
+
+      <!-- Under review -->
+      <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 hover:border-amber-500/30 transition flex flex-col justify-between">
+        <div class="text-[11px] uppercase tracking-wider text-amber-400 font-semibold flex items-center justify-between">
+          <span>Under Review</span>
+          <span class="h-2 w-2 rounded-full bg-amber-400"></span>
+        </div>
+        <div class="text-2xl sm:text-3xl font-extrabold text-amber-400 my-1" id="kpi-review">0</div>
+        <div class="text-[11px] text-slate-500 flex items-center justify-between">
+          <span>อยู่ระหว่างประเมิน</span>
+          <span id="pct-review" class="text-amber-400 font-medium">0%</span>
+        </div>
+      </div>
+
+      <!-- Revision (เพิ่มใหม่) -->
+      <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 hover:border-purple-500/30 transition flex flex-col justify-between">
+        <div class="text-[11px] uppercase tracking-wider text-purple-400 font-semibold flex items-center justify-between">
+          <span>Revision</span>
+          <span class="h-2 w-2 rounded-full bg-purple-400"></span>
+        </div>
+        <div class="text-2xl sm:text-3xl font-extrabold text-purple-400 my-1" id="kpi-revision">0</div>
+        <div class="text-[11px] text-slate-500 flex items-center justify-between">
+          <span>แก้ไขบทความ</span>
+          <span id="pct-revision" class="text-purple-400 font-medium">0%</span>
+        </div>
+      </div>
+
+      <!-- Accepted -->
+      <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 hover:border-emerald-500/30 transition flex flex-col justify-between">
+        <div class="text-[11px] uppercase tracking-wider text-emerald-400 font-semibold flex items-center justify-between">
+          <span>Accepted</span>
+          <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
+        </div>
+        <div class="text-2xl sm:text-3xl font-extrabold text-emerald-400 my-1" id="kpi-accepted">0</div>
+        <div class="text-[11px] text-slate-500 flex items-center justify-between">
+          <span>ตอบรับตีพิมพ์</span>
+          <span id="pct-accepted" class="text-emerald-400 font-medium">0%</span>
+        </div>
+      </div>
+
+      <!-- Rejected (เพิ่มใหม่) -->
+      <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 hover:border-rose-500/30 transition flex flex-col justify-between">
+        <div class="text-[11px] uppercase tracking-wider text-rose-400 font-semibold flex items-center justify-between">
+          <span>Rejected</span>
+          <span class="h-2 w-2 rounded-full bg-rose-400"></span>
+        </div>
+        <div class="text-2xl sm:text-3xl font-extrabold text-rose-400 my-1" id="kpi-rejected">0</div>
+        <div class="text-[11px] text-slate-500 flex items-center justify-between">
+          <span>ปฏิเสธบทความ</span>
+          <span id="pct-rejected" class="text-rose-400 font-medium">0%</span>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Overall Pipeline Ratio Bar (6 สถานะ) -->
+    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4">
+      <div class="flex items-center justify-between text-xs font-semibold text-slate-400 mb-2.5">
+        <span>Article Status Pipeline</span>
+        <span id="pipeline-summary" class="text-slate-400 font-normal">ความคืบหน้ารวม</span>
+      </div>
+      <div class="w-full h-3.5 bg-slate-800/90 rounded-full overflow-hidden flex">
+        <div id="bar-incomplete" style="width: 0%" class="bg-slate-500 transition-all duration-700" title="Incomplete"></div>
+        <div id="bar-submitted" style="width: 0%" class="bg-sky-500 transition-all duration-700" title="Submitted"></div>
+        <div id="bar-review" style="width: 0%" class="bg-amber-500 transition-all duration-700" title="Under Review"></div>
+        <div id="bar-revision" style="width: 0%" class="bg-purple-500 transition-all duration-700" title="Revision"></div>
+        <div id="bar-accepted" style="width: 0%" class="bg-emerald-500 transition-all duration-700" title="Accepted"></div>
+        <div id="bar-rejected" style="width: 0%" class="bg-rose-500 transition-all duration-700" title="Rejected"></div>
+      </div>
+      <div class="flex flex-wrap items-center gap-4 mt-3 text-[11px] text-slate-400">
+        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-slate-500"></span> Incomplete</span>
+        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-sky-500"></span> Submitted</span>
+        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-500"></span> Under Review</span>
+        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-purple-500"></span> Revision</span>
+        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Accepted</span>
+        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-rose-500"></span> Rejected</span>
+      </div>
+    </div>
+
+    <!-- Charts Grid -->
+    <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      <!-- Doughnut Chart: Overall Status -->
+      <div class="bg-slate-900/70 border border-slate-800/80 rounded-2xl p-5 flex flex-col items-center">
+        <div class="w-full flex items-center justify-between mb-4">
+          <h2 class="text-sm font-semibold text-slate-200">สัดส่วนสถานะบทความ</h2>
+          <span class="text-xs text-slate-500">Overall Ratio</span>
+        </div>
+        <div class="relative w-full max-w-[260px] aspect-square my-auto flex items-center justify-center">
+          <canvas id="doughnutChart"></canvas>
+          <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+            <span class="text-3xl font-black text-white" id="center-total">0</span>
+            <span class="text-[11px] text-slate-400 tracking-wider">ARTICLES</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Horizontal Stacked Bar Chart: By Subject Area -->
+      <div class="lg:col-span-2 bg-slate-900/70 border border-slate-800/80 rounded-2xl p-5 flex flex-col">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h2 class="text-sm font-semibold text-slate-200">จำนวนบทความแยกตามสาขาวิชา (Subject Areas)</h2>
+            <p class="text-xs text-slate-500 mt-0.5">แสดงจำนวนตามสถานะในแต่ละสาขา</p>
+          </div>
+        </div>
+        <div class="relative flex-1 min-h-[300px] w-full">
+          <canvas id="stackedBarChart"></canvas>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Subject Areas Detail Table -->
+    <section class="bg-slate-900/70 border border-slate-800/80 rounded-2xl p-5">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="text-sm font-semibold text-slate-200">ตารางจำแนกรายละเอียดตามสาขาวิชา</h2>
+          <p class="text-xs text-slate-500 mt-0.5">ข้อมูลตรงจากแผ่นงาน Google Sheets</p>
+        </div>
+        <span class="text-xs text-slate-400" id="table-row-count">0 สาขาวิชา</span>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm text-slate-300">
+          <thead>
+            <tr class="border-b border-slate-800 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              <th class="py-3 px-3">Subject Area / สาขาวิชา</th>
+              <th class="py-3 px-2 text-center">Incomplete</th>
+              <th class="py-3 px-2 text-center">Submitted</th>
+              <th class="py-3 px-2 text-center">Under review</th>
+              <th class="py-3 px-2 text-center">Revision</th>
+              <th class="py-3 px-2 text-center">Accepted</th>
+              <th class="py-3 px-2 text-center">Rejected</th>
+              <th class="py-3 px-3 text-right">รวมบทความ</th>
+            </tr>
+          </thead>
+          <tbody id="subject-table-body" class="divide-y divide-slate-800/60 font-normal">
+            <tr>
+              <td colspan="8" class="text-center py-8 text-slate-500">กำลังเชื่อมต่อข้อมูลจาก Google Sheet...</td>
+            </tr>
+          </tbody>
+          <tfoot id="subject-table-foot" class="border-t-2 border-slate-700 bg-slate-900/90 font-bold text-white">
+          </tfoot>
+        </table>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="pt-4 pb-8 text-center text-xs text-slate-600 flex flex-col sm:flex-row items-center justify-between border-t border-slate-900 gap-2">
+      <div>PAST Editorial Tracker • Progress in Applied Science and Technology</div>
+      <div>อัปเดตล่าสุด: <span id="last-updated-time" class="text-slate-400">-</span></div>
+    </footer>
+
+  </div>
+
+  <!-- JavaScript Logic -->
+  <script>
+    // ==========================================
+    // การตั้งค่า Google Sheet
+    // ==========================================
+    const SHEET_ID = '1Lxh4ODklURHBsnWy4sO2r8uNSj9Db3nxXyBoy2E9WBg';
+    const SHEET_NAME = 'Sheet1';
+    const REFRESH_INTERVAL_SEC = 10;
+    // ==========================================
+
+    let doughnutChartInstance = null;
+    let barChartInstance = null;
+
+    function getNumericVal(cell) {
+      if (!cell || cell.v === null || cell.v === undefined) return 0;
+      const n = Number(cell.v);
+      return isNaN(n) ? 0 : n;
+    }
+
+    function getTextVal(cell) {
+      if (!cell || cell.v === null || cell.v === undefined) return '';
+      return String(cell.v).trim();
+    }
+
+    // ฟังก์ชันวาด / อัปเดต Doughnut Chart
+    function updateDoughnutChart(incomplete, submitted, underReview, revision, accepted, rejected) {
+      const ctx = document.getElementById('doughnutChart').getContext('2d');
+      const dataValues = [incomplete, submitted, underReview, revision, accepted, rejected];
+
+      if (doughnutChartInstance) {
+        doughnutChartInstance.data.datasets[0].data = dataValues;
+        doughnutChartInstance.update('none');
+        return;
+      }
+
+      doughnutChartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Incomplete', 'Submitted', 'Under review', 'Revision', 'Accepted', 'Rejected'],
+          datasets: [{
+            data: dataValues,
+            backgroundColor: ['#64748b', '#0284c7', '#f59e0b', '#8b5cf6', '#10b981', '#f43f5e'],
+            borderColor: '#020617',
+            borderWidth: 3,
+            hoverOffset: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '72%',
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => ` ${ctx.label}: ${ctx.raw} บทความ`
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // ฟังก์ชันวาด / อัปเดต Stacked Bar Chart แยกตามสาขาวิชา
+    function updateStackedBarChart(categories) {
+      const ctx = document.getElementById('stackedBarChart').getContext('2d');
+      
+      const labels = categories.map(c => c.name);
+      const incData = categories.map(c => c.incomplete);
+      const subData = categories.map(c => c.submitted);
+      const revData = categories.map(c => c.underReview);
+      const rvnData = categories.map(c => c.revision);
+      const accData = categories.map(c => c.accepted);
+      const rejData = categories.map(c => c.rejected);
+
+      if (barChartInstance) {
+        barChartInstance.data.labels = labels;
+        barChartInstance.data.datasets[0].data = incData;
+        barChartInstance.data.datasets[1].data = subData;
+        barChartInstance.data.datasets[2].data = revData;
+        barChartInstance.data.datasets[3].data = rvnData;
+        barChartInstance.data.datasets[4].data = accData;
+        barChartInstance.data.datasets[5].data = rejData;
+        barChartInstance.update('none');
+        return;
+      }
+
+      barChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            { label: 'Incomplete', data: incData, backgroundColor: '#64748b' },
+            { label: 'Submitted', data: subData, backgroundColor: '#0284c7' },
+            { label: 'Under review', data: revData, backgroundColor: '#f59e0b' },
+            { label: 'Revision', data: rvnData, backgroundColor: '#8b5cf6' },
+            { label: 'Accepted', data: accData, backgroundColor: '#10b981' },
+            { label: 'Rejected', data: rejData, backgroundColor: '#f43f5e' }
+          ]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              stacked: true,
+              ticks: { color: '#94a3b8', stepSize: 1 },
+              grid: { color: 'rgba(148, 163, 184, 0.08)' }
+            },
+            y: {
+              stacked: true,
+              ticks: { color: '#cbd5e1', font: { size: 11 } },
+              grid: { display: false }
+            }
+          },
+          plugins: {
+            legend: {
+              position: 'top',
+              align: 'end',
+              labels: { boxWidth: 10, boxHeight: 10, color: '#cbd5e1', font: { size: 11 } }
+            }
+          }
+        }
+      });
+    }
+
+    // ฟังก์ชันหลัก: ดึงข้อมูลจาก Google Sheets
+    async function fetchSheetData() {
+      const syncStatus = document.getElementById('sync-status');
+      const errorBanner = document.getElementById('error-banner');
+      syncStatus.innerText = 'Checking...';
+
+      const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(SHEET_NAME)}&t=${Date.now()}`;
+
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP Status ${res.status}`);
+        const text = await res.text();
+
+        const jsonStart = text.indexOf('{');
+        const jsonEnd = text.lastIndexOf('}');
+        if (jsonStart === -1 || jsonEnd === -1) {
+          throw new Error('ไม่พบข้อมูล JSON ที่ถูกต้อง ตรวจสอบสิทธิ์การแชร์ชีต');
+        }
+
+        const data = JSON.parse(text.substring(jsonStart, jsonEnd + 1));
+        const rawRows = data.table.rows;
+
+        if (!rawRows || rawRows.length === 0) {
+          throw new Error('ไม่พบแถวข้อมูลในชีต');
+        }
+
+        errorBanner.classList.add('hidden');
+
+        let totalRow = null;
+        const categoryList = [];
+
+        // ลูปประมวลผลแถว
+        rawRows.forEach((r, idx) => {
+          if (!r.c) return;
+          const colA = getTextVal(r.c[0]);
+
+          if (colA.toLowerCase().includes('total') || (idx === 0 && (r.c[1] || r.c[2]))) {
+            totalRow = r;
+          } else if (colA !== '') {
+            // โครงสร้างคอลัมน์:
+            // 0: Area, 3: Total, 4: Incomplete, 5: Submitted, 6: Under review, 7: Revision, 8: Accepted, 9: Rejected
+            const inc = getNumericVal(r.c[4]);
+            const sub = getNumericVal(r.c[5]);
+            const rev = getNumericVal(r.c[6]);
+            const rvn = getNumericVal(r.c[7]);
+            const acc = getNumericVal(r.c[8]);
+            const rej = getNumericVal(r.c[9]);
+            const rowTotal = getNumericVal(r.c[3]) || (inc + sub + rev + rvn + acc + rej);
+
+            categoryList.push({
+              name: colA,
+              incomplete: inc,
+              submitted: sub,
+              underReview: rev,
+              revision: rvn,
+              accepted: acc,
+              rejected: rej,
+              total: rowTotal
+            });
+          }
+        });
+
+        let year = '2026';
+        let issue = '3';
+        let totalArticles = 0;
+        let incCount = 0;
+        let subCount = 0;
+        let revCount = 0;
+        let rvnCount = 0;
+        let accCount = 0;
+        let rejCount = 0;
+
+        if (totalRow && totalRow.c) {
+          year = getTextVal(totalRow.c[1]) || year;
+          issue = getTextVal(totalRow.c[2]) || issue;
+          totalArticles = getNumericVal(totalRow.c[3]);
+          incCount = getNumericVal(totalRow.c[4]);
+          subCount = getNumericVal(totalRow.c[5]);
+          revCount = getNumericVal(totalRow.c[6]);
+          rvnCount = getNumericVal(totalRow.c[7]);
+          accCount = getNumericVal(totalRow.c[8]);
+          rejCount = getNumericVal(totalRow.c[9]);
+        } else {
+          categoryList.forEach(c => {
+            incCount += c.incomplete;
+            subCount += c.submitted;
+            revCount += c.underReview;
+            rvnCount += c.revision;
+            accCount += c.accepted;
+            rejCount += c.rejected;
+          });
+          totalArticles = incCount + subCount + revCount + rvnCount + accCount + rejCount;
+        }
+
+        if (totalArticles === 0 && (incCount + subCount + revCount + rvnCount + accCount + rejCount) > 0) {
+          totalArticles = incCount + subCount + revCount + rvnCount + accCount + rejCount;
+        }
+
+        const calcPct = (val) => totalArticles > 0 ? ((val / totalArticles) * 100).toFixed(1) + '%' : '0%';
+
+        // 1. อัปเดต Header & Badges
+        document.getElementById('badge-year').innerText = year;
+        document.getElementById('badge-issue').innerText = issue;
+
+        // 2. อัปเดต KPI Cards
+        document.getElementById('kpi-total').innerText = totalArticles;
+        document.getElementById('center-total').innerText = totalArticles;
+
+        document.getElementById('kpi-incomplete').innerText = incCount;
+        document.getElementById('pct-incomplete').innerText = calcPct(incCount);
+
+        document.getElementById('kpi-submitted').innerText = subCount;
+        document.getElementById('pct-submitted').innerText = calcPct(subCount);
+
+        document.getElementById('kpi-review').innerText = revCount;
+        document.getElementById('pct-review').innerText = calcPct(revCount);
+
+        document.getElementById('kpi-revision').innerText = rvnCount;
+        document.getElementById('pct-revision').innerText = calcPct(rvnCount);
+
+        document.getElementById('kpi-accepted').innerText = accCount;
+        document.getElementById('pct-accepted').innerText = calcPct(accCount);
+
+        document.getElementById('kpi-rejected').innerText = rejCount;
+        document.getElementById('pct-rejected').innerText = calcPct(rejCount);
+
+        // 3. อัปเดต Status Pipeline Bar
+        document.getElementById('bar-incomplete').style.width = calcPct(incCount);
+        document.getElementById('bar-submitted').style.width = calcPct(subCount);
+        document.getElementById('bar-review').style.width = calcPct(revCount);
+        document.getElementById('bar-revision').style.width = calcPct(rvnCount);
+        document.getElementById('bar-accepted').style.width = calcPct(accCount);
+        document.getElementById('bar-rejected').style.width = calcPct(rejCount);
+        document.getElementById('pipeline-summary').innerText = `Accepted ${calcPct(accCount)} | In Review ${calcPct(revCount)} | Revision ${calcPct(rvnCount)}`;
+
+        // 4. อัปเดตกราฟ
+        updateDoughnutChart(incCount, subCount, revCount, rvnCount, accCount, rejCount);
+        updateStackedBarChart(categoryList);
+
+        // 5. อัปเดตตาราง
+        document.getElementById('table-row-count').innerText = `${categoryList.length} สาขาวิชา`;
+        const tbody = document.getElementById('subject-table-body');
+        
+        tbody.innerHTML = categoryList.map(item => `
+          <tr class="hover:bg-slate-800/40 transition">
+            <td class="py-3 px-3 font-medium text-slate-200">${item.name}</td>
+            <td class="py-3 px-2 text-center ${item.incomplete > 0 ? 'text-slate-300 font-bold' : 'text-slate-600'}">${item.incomplete}</td>
+            <td class="py-3 px-2 text-center ${item.submitted > 0 ? 'text-sky-400 font-bold' : 'text-slate-600'}">${item.submitted}</td>
+            <td class="py-3 px-2 text-center ${item.underReview > 0 ? 'text-amber-400 font-bold' : 'text-slate-600'}">${item.underReview}</td>
+            <td class="py-3 px-2 text-center ${item.revision > 0 ? 'text-purple-400 font-bold' : 'text-slate-600'}">${item.revision}</td>
+            <td class="py-3 px-2 text-center ${item.accepted > 0 ? 'text-emerald-400 font-bold' : 'text-slate-600'}">${item.accepted}</td>
+            <td class="py-3 px-2 text-center ${item.rejected > 0 ? 'text-rose-400 font-bold' : 'text-slate-600'}">${item.rejected}</td>
+            <td class="py-3 px-3 text-right font-semibold ${item.total > 0 ? 'text-white' : 'text-slate-600'}">${item.total}</td>
+          </tr>
+        `).join('');
+
+        // แถวสรุปรวมท้ายตาราง
+        const tfoot = document.getElementById('subject-table-foot');
+        tfoot.innerHTML = `
+          <tr>
+            <td class="py-3 px-3 uppercase tracking-wider text-indigo-300">Total (รวมทั้งหมด)</td>
+            <td class="py-3 px-2 text-center text-slate-300">${incCount}</td>
+            <td class="py-3 px-2 text-center text-sky-400">${subCount}</td>
+            <td class="py-3 px-2 text-center text-amber-400">${revCount}</td>
+            <td class="py-3 px-2 text-center text-purple-400">${rvnCount}</td>
+            <td class="py-3 px-2 text-center text-emerald-400">${accCount}</td>
+            <td class="py-3 px-2 text-center text-rose-400">${rejCount}</td>
+            <td class="py-3 px-3 text-right text-indigo-300 text-base">${totalArticles}</td>
+          </tr>
+        `;
+
+        const now = new Date();
+        document.getElementById('last-updated-time').innerText = now.toLocaleTimeString('th-TH');
+        syncStatus.innerText = 'Live Sync';
+
+      } catch (err) {
+        console.error('Data Fetch Error:', err);
+        syncStatus.innerText = 'Error';
+        errorBanner.classList.remove('hidden');
+        document.getElementById('error-message').innerText = `การดึงข้อมูลขัดข้อง: ${err.message}`;
+      }
+    }
+
+    // ทำงานทันทีเมื่อเปิดหน้าเว็บ
+    fetchSheetData();
+
+    // ดึงข้อมูลใหม่ซ้ำอัตโนมัติทุกๆ 10 วินาที
+    setInterval(fetchSheetData, REFRESH_INTERVAL_SEC * 1000);
+  </script>
+</body>
+</html>
